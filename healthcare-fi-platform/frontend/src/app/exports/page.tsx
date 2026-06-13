@@ -97,7 +97,7 @@ export default function ExportsPage() {
                 <Label>Format</Label>
                 <Select 
                   value={newExport.format} 
-                  onValueChange={(val) => setNewExport({ ...newExport, format: val })}
+                  onValueChange={(val) => setNewExport({ ...newExport, format: val || '' })}
                 >
                   <SelectTrigger>
                     <SelectValue />
