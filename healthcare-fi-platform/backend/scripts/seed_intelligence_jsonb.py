@@ -208,11 +208,11 @@ async def seed_scenarios(conn):
         try:
             await conn.execute("""
                 INSERT INTO strategic_scenarios (
-                    tenant_id, name, description, type, status,
+                    id, tenant_id, name, description, type, status,
                     assumptions, driver_values, results, created_by, created_at
-                ) VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9,$10)
+                ) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9::jsonb,$10,$11)
             """,
-                uuid.UUID(TENANT_ID), s["name"], s["description"],
+                uuid.uuid4(), uuid.UUID(TENANT_ID), s["name"], s["description"],
                 s["type"], s["status"],
                 s["assumptions"], s["driver_values"], s["results"],
                 s["created_by"], NOW
@@ -284,11 +284,12 @@ async def seed_decisions(conn):
         try:
             await conn.execute("""
                 INSERT INTO executive_decisions (
-                    tenant_id, title, description, category, priority, status,
+                    id, tenant_id, title, description, category, priority, status,
                     impact_estimate, deadline, context, created_at
-                ) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9::jsonb,$10)
+                ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10::jsonb,$11)
             """,
-                d["tenant_id"] if "tenant_id" in d else uuid.UUID(TENANT_ID),
+                uuid.uuid4(),
+                TENANT_ID,
                 d["title"], d["description"],
                 d["category"], d["priority"], d["status"],
                 d["impact_estimate"], d["deadline"],
