@@ -289,7 +289,7 @@ async def get_performance_summary(
     total_rev = sum(k["value"] for k in kpi_summary["kpis"] if k["code"] in ("GROSS_REVENUE", "NET_REVENUE"))
     total_exp = next((k["value"] for k in kpi_summary["kpis"] if k["code"] == "TOTAL_EXPENSES"), 0)
     margin = next((k["value"] for k in kpi_summary["kpis"] if k["code"] == "NET_MARGIN"), 0)
-    score = min(100, max(0, margin * 2 + 30))
+    score = kpi_summary.get("hospital_score", min(100, max(0, margin * 2 + 30)))
     
     return {"data": {
         "score": round(score, 1),

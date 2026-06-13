@@ -424,4 +424,23 @@ class QueryEngine:
             elif status == "warning" and summary["overall_health"] == "healthy":
                 summary["overall_health"] = "warning"
 
+        # Compute HospitalScore
+        score = 0
+        total_weight = 0
+        for kpi in summary["kpis"]:
+            weight = 1.0
+            # weight core metrics more
+            if kpi["code"] in ["NET_REVENUE", "EBITDA_MARGIN", "OCCUPANCY_RATE", "CLAIM_DENIAL_RATE"]:
+                weight = 2.0
+            
+            total_weight += weight
+            if kpi["status"] == "healthy":
+                score += 100 * weight
+            elif kpi["status"] == "warning":
+                score += 50 * weight
+            else:
+                score += 0 * weight
+                
+        summary["hospital_score"] = round(score / total_weight, 1) if total_weight > 0 else 0
+
         return summary

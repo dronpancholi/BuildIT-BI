@@ -16,6 +16,7 @@ import {
   ChevronRight,
   LogOut,
   User,
+  Users,
   GitMerge,
   Network,
   BarChart,
@@ -76,9 +77,11 @@ const navigation: NavSection[] = [
     label: 'Financial Performance',
     items: [
       { name: 'Revenue Intelligence', href: '/revenue', icon: TrendingUp },
+      { name: 'Cash Flow', href: '/cash-flow', icon: DollarSign },
       { name: 'Departments', href: '/departments', icon: Building2 },
       { name: 'Claims & Denials', href: '/claims', icon: FileText },
       { name: 'Occupancy', href: '/occupancy', icon: BedDouble },
+      { name: 'Patients', href: '/patients', icon: Users },
     ],
   },
   {

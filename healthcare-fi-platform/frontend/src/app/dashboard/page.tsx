@@ -192,6 +192,41 @@ export default function ExecutiveCommandCenter() {
           })}
         </div>
 
+        {/* Revenue Charts Row */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <TrendingUp className="h-4 w-4 text-indigo-400" />
+                Revenue Timeline — 12 Months
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading || revenueTrend.length === 0 ? (
+                <div className="h-[240px] bg-muted/30 animate-pulse rounded-lg" />
+              ) : (
+                <RevenueTimelineChart data={revenueTrend} height={240} color="#6366f1" />
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                <Brain className="h-4 w-4 text-cyan-400" />
+                Revenue by Department
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading || departments.length === 0 ? (
+                <div className="h-[240px] bg-muted/30 animate-pulse rounded-lg" />
+              ) : (
+                <DepartmentPerformanceChart data={departments} height={240} />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Insights and Alerts Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
           {/* AI Narrative */}

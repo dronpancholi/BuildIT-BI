@@ -384,6 +384,8 @@ async def generate_executive_report(
         "generated_by": current_user.email,
         "period": req.period,
         "tenant_id": str(current_user.tenant_id),
+        "hospital_score": kpi_summary.get("hospital_score", 0),
+        "overall_health": kpi_summary.get("overall_health", "unknown"),
         "kpis": [],
         "sections": [],
     }
@@ -455,13 +457,13 @@ async def generate_executive_report(
             
             # Title
             ws.merge_cells('A1:F1')
-            ws['A1'] = "BuildIT Healthcare — Executive Financial Report"
+            ws['A1'] = "BuildIT Healthcare — Executive Board Pack"
             ws['A1'].font = Font(name='Calibri', size=16, bold=True, color='1F4E79')
             ws['A1'].alignment = Alignment(horizontal='center')
             
             ws.merge_cells('A2:F2')
-            ws['A2'] = f"Generated: {datetime.utcnow().strftime('%B %d, %Y')} | Period: {req.period}"
-            ws['A2'].font = Font(name='Calibri', size=10, italic=True, color='808080')
+            ws['A2'] = f"Generated: {datetime.utcnow().strftime('%B %d, %Y')} | Period: {req.period} | Overall Score: {report_data['hospital_score']} / 100"
+            ws['A2'].font = Font(name='Calibri', size=11, italic=True, color='808080')
             ws['A2'].alignment = Alignment(horizontal='center')
             
             # Headers

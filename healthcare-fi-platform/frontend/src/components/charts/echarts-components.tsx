@@ -24,7 +24,7 @@ echarts.use([
 ]);
 
 interface ChartProps {
-  option: echarts.EChartsOption;
+  option: echarts.EChartsCoreOption;
   width?: string | number;
   height?: string | number;
   className?: string;
@@ -68,7 +68,7 @@ export function EChartsComponent({ option, width = '100%', height = 400, classNa
 
 // Pre-built chart configurations for common healthcare metrics
 export function RevenueBarChart({ data }: { data: Array<{ name: string; value: number }> }) {
-  const option: echarts.EChartsOption = {
+  const option: echarts.EChartsCoreOption = {
     title: { text: 'Revenue by Department', left: 'center' },
     tooltip: { trigger: 'axis' },
     xAxis: {
@@ -90,7 +90,7 @@ export function RevenueBarChart({ data }: { data: Array<{ name: string; value: n
 }
 
 export function OccupancyGaugeChart({ value }: { value: number }) {
-  const option: echarts.EChartsOption = {
+  const option: echarts.EChartsCoreOption = {
     series: [{
       type: 'gauge',
       startAngle: 180,
@@ -126,7 +126,7 @@ export function OccupancyGaugeChart({ value }: { value: number }) {
 }
 
 export function KPIPieChart({ data }: { data: Array<{ name: string; value: number; color: string }> }) {
-  const option: echarts.EChartsOption = {
+  const option: echarts.EChartsCoreOption = {
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
     series: [{
       type: 'pie',
@@ -149,7 +149,7 @@ export function KPIPieChart({ data }: { data: Array<{ name: string; value: numbe
 }
 
 export function TrendLineChart({ data, title }: { data: Array<{ date: string; value: number }>; title?: string }) {
-  const option: echarts.EChartsOption = {
+  const option: echarts.EChartsCoreOption = {
     title: { text: title || 'Trend', left: 'center' },
     tooltip: { trigger: 'axis' },
     xAxis: {
