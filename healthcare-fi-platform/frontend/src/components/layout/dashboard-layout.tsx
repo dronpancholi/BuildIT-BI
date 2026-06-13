@@ -7,37 +7,15 @@ import { cn } from '@/lib/utils';
 import { api } from '@/lib/api/client';
 import {
   LayoutDashboard,
-  TrendingUp,
-  Brain,
+  BarChart,
   BarChart3,
-  AlertTriangle,
+  Download,
+  UploadCloud,
   Settings,
   ChevronLeft,
   ChevronRight,
   LogOut,
   User,
-  Users,
-  GitMerge,
-  Network,
-  BarChart,
-  LayoutGrid,
-  Database,
-  Download,
-  MessageSquare,
-  Shield,
-  Palette,
-  Code,
-  DollarSign,
-  Zap,
-  Target,
-  BookOpen,
-  Layers,
-  Activity,
-  Command,
-  Bot,
-  Building2,
-  FileText,
-  BedDouble,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -66,55 +44,26 @@ const navigation: NavSection[] = [
   {
     label: 'Command',
     items: [
-      { name: 'Command Center', href: '/dashboard', icon: LayoutDashboard },
-      { name: 'Executive Center', href: '/executive-center', icon: Command },
-      { name: 'AI CFO Core', href: '/ai-cfo', icon: Zap },
-      { name: 'AI CFO Copilot', href: '/copilot', icon: Bot },
-      { name: 'Workspace', href: '/workspace', icon: LayoutDashboard },
+      { name: 'Executive Center', href: '/executive-center', icon: LayoutDashboard },
     ],
   },
   {
-    label: 'Financial Performance',
-    items: [
-      { name: 'Revenue Intelligence', href: '/revenue', icon: TrendingUp },
-      { name: 'Cash Flow', href: '/cash-flow', icon: DollarSign },
-      { name: 'Departments', href: '/departments', icon: Building2 },
-      { name: 'Claims & Denials', href: '/claims', icon: FileText },
-      { name: 'Occupancy', href: '/occupancy', icon: BedDouble },
-      { name: 'Patients', href: '/patients', icon: Users },
-    ],
-  },
-  {
-    label: 'Intelligence',
-    items: [
-      { name: 'Intelligence Hub', href: '/intelligence', icon: Activity },
-      { name: 'AI Insights', href: '/insights', icon: Brain },
-      { name: 'Decisions', href: '/decisions', icon: GitMerge },
-      { name: 'Forecasting', href: '/forecasting', icon: BarChart3 },
-      { name: 'Strategic Planning', href: '/strategic', icon: Target },
-      { name: 'Alert Center', href: '/alerts', icon: AlertTriangle },
-    ],
-  },
-  {
-    label: 'Data & Analytics',
+    label: 'Analysis',
     items: [
       { name: 'Analytics', href: '/analytics', icon: BarChart },
-      { name: 'Dashboards', href: '/dashboards', icon: LayoutGrid },
-      { name: 'Query Engine', href: '/analytics/query', icon: Database },
-      { name: 'Exports', href: '/exports', icon: Download },
-      { name: 'Visualization', href: '/visualization', icon: Palette },
+      { name: 'Forecasting', href: '/forecasting', icon: BarChart3 },
+    ],
+  },
+  {
+    label: 'Data & Reporting',
+    items: [
+      { name: 'Data Import Center', href: '/import', icon: UploadCloud },
+      { name: 'Board Pack Exports', href: '/exports', icon: Download },
     ],
   },
   {
     label: 'Platform',
     items: [
-      { name: 'Metric Studio', href: '/metric-studio', icon: BarChart3 },
-      { name: 'Semantic Layer', href: '/semantic', icon: Layers },
-      { name: 'Formula Editor', href: '/formulas', icon: Code },
-      { name: 'Knowledge Graph', href: '/knowledge-graph', icon: Network },
-      { name: 'Governance', href: '/governance', icon: Shield },
-      { name: 'Collaboration', href: '/collaboration', icon: MessageSquare },
-      { name: 'Learning Engine', href: '/learning', icon: BookOpen },
       { name: 'Settings', href: '/settings', icon: Settings },
     ],
   },
@@ -166,7 +115,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
                 <span className="text-xs font-bold text-white">BI</span>
               </div>
-              <span className="text-lg font-semibold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">BuildIT BI</span>
+              <span className="text-lg font-semibold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">BuildIT Executive</span>
             </div>
           )}
           <Button
@@ -192,7 +141,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               )}
               <div className="space-y-0.5">
                 {section.items.map((item) => {
-                  const isActive = pathname === item.href;
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                   return (
                     <Link
                       key={item.name}
@@ -234,7 +183,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 {!collapsed && (
                   <div className="flex flex-col items-start text-left">
                     <span className="text-sm font-medium">{user?.full_name || 'User'}</span>
-                    <span className="text-xs text-muted-foreground capitalize">{user?.role || 'viewer'}</span>
+                    <span className="text-xs text-muted-foreground capitalize">{user?.role || 'executive'}</span>
                   </div>
                 )}
               </Button>
@@ -248,7 +197,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
-                Log out
+                Sign out
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -256,7 +205,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {children}
       </main>
     </div>

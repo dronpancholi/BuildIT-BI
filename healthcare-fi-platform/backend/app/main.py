@@ -63,15 +63,6 @@ async def detailed_health_check():
     except Exception as e:
         checks["database"] = {"status": "UNHEALTHY", "error": str(e)}
     
-    # Redis check
-    try:
-        import redis.asyncio as redis
-        r = redis.from_url(settings.REDIS_URL)
-        await r.ping()
-        checks["redis"] = {"status": "HEALTHY", "latency_ms": 2}
-    except Exception as e:
-        checks["redis"] = {"status": "UNHEALTHY", "error": str(e)}
-    
     overall_status = "HEALTHY"
     if any(c.get("status") == "UNHEALTHY" for c in checks.values()):
         overall_status = "DEGRADED"
