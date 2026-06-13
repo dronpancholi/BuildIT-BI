@@ -18,7 +18,7 @@ import {
   Download,
   Filter,
 } from 'lucide-react';
-import { kpiAPI, insightsAPI } from '@/lib/api/client';
+import { kpiAPI, insightsAPI, exportsAPI } from '@/lib/api/client';
 import { ExecutiveSummary, ComprehensiveInsights, KPIMetric } from '@/lib/types';
 import { formatCurrency, formatPercentage, getSeverityColor } from '@/lib/utils/format';
 import { RevenueTimelineChart } from '@/components/charts/RevenueTimelineChart';
@@ -28,6 +28,7 @@ export default function ExecutiveCommandCenter() {
   const [summary, setSummary] = useState<ExecutiveSummary | null>(null);
   const [insights, setInsights] = useState<ComprehensiveInsights | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [revenueTrend, setRevenueTrend] = useState<Array<{ date: string; value: number }>>([]);
   const [departments, setDepartments] = useState<Array<{ name: string; value: number }>>([]);
@@ -81,6 +82,26 @@ export default function ExecutiveCommandCenter() {
     return summary?.kpis?.[code] || null;
   };
 
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const res = await exportsAPI.generateExecutiveReport({ period: '30d' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'executive_report.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+      setError('Failed to export executive report.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="flex-1 space-y-6 p-6">
@@ -97,8 +118,12 @@ export default function ExecutiveCommandCenter() {
               <Filter className="h-4 w-4 mr-2" />
               Filter
             </Button>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting}>
+              {exporting ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
               Export
             </Button>
             <Button size="sm" onClick={fetchData} disabled={loading}>

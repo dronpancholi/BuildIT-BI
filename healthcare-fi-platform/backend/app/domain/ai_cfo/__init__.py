@@ -251,6 +251,8 @@ async def _generate_answer(
         context_str = f"\nContext entities: {', '.join(str(e) for e in context['entities'][:5])}"
     if context.get("time_range"):
         context_str += f"\nTime range: {context['time_range']}"
+    if context.get("system_kpis"):
+        context_str += f"\nSystem KPIs: {context['system_kpis']}"
 
     user_prompt = (
         f"Intent: {intent.value}\n"

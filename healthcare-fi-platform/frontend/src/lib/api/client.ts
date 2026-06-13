@@ -39,7 +39,9 @@ api.interceptors.response.use(
 
 export const authAPI = {
   login: (email: string, password: string) =>
-    api.post('/auth/login', new URLSearchParams({ username: email, password })),
+    api.post('/auth/login', new URLSearchParams({ username: email, password }), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    }),
   register: (data: { email: string; password: string; full_name: string; role: string }) =>
     api.post('/auth/register', data),
   getMe: () => api.get('/auth/me'),
@@ -126,6 +128,36 @@ v2.interceptors.request.use((config) => {
   }
   return config;
 });
+
+v2.interceptors.response.use(
+  (response) => {
+    // Skip unwrap if it's a blob/file download
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
+
+    // If the backend wraps the actual payload in { status: "success", data: ... }
+    // unwrap it transparently so the frontend pages don't crash
+    if (
+      response.data &&
+      typeof response.data === 'object' &&
+      response.data.status === 'success' &&
+      'data' in response.data
+    ) {
+      return { ...response, data: response.data.data };
+    }
+    return response;
+  },
+  (error) => {
+    if (error.response?.status === 401) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('access_token');
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const intelligenceAPI = {
   listInsights: (params?: { status?: string; scope_type?: string; limit?: number; offset?: number }) =>
@@ -290,6 +322,8 @@ export const exportsAPI = {
   cancelSchedule: (id: string) => v2.delete(`/exports/schedule/${id}`),
   subscribe: (data: any) => v2.post('/exports/subscribe', data),
   listSubscriptions: () => v2.get('/exports/subscriptions'),
+  generateExecutiveReport: (data: any = {}) => 
+    v2.post('/exports/executive-report', data, { responseType: 'blob' }),
 };
 
 export const collaborationAPI = {

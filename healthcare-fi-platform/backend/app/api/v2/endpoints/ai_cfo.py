@@ -168,8 +168,17 @@ async def ask_question(
     db: AsyncSession = Depends(get_db),
 ):
     """Ask a question to the AI CFO."""
+    from app.core.data_fabric.query_engine import QueryEngine
+    
+    # Grab real data to inject into context
+    engine = QueryEngine(db, tenant_id)
+    kpi_summary = await engine.get_kpi_summary()
+    
+    ctx = body.context or {}
+    ctx["system_kpis"] = kpi_summary
+    
     service = CFOCoreService()
-    question = await service.ask_question(tenant_id, user.id, body.user_query, body.context or {})
+    question = await service.ask_question(tenant_id, user.id, body.user_query, ctx)
 
     repo = CFOQuestionRepository(db)
     saved = await repo.create(

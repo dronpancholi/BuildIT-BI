@@ -90,6 +90,11 @@ async def process_query(
         raise HTTPException(status_code=400, detail="user_query is required")
     context = body.get("context", {})
 
+    from app.core.data_fabric.query_engine import QueryEngine
+    engine = QueryEngine(db, UUID(tenant_id))
+    kpi_summary = await engine.get_kpi_summary()
+    context["system_kpis"] = kpi_summary
+
     try:
         copilot = AICFOCopilot(tenant_id)
         message, actions = await copilot.process_query(user.id, user_query, context)
