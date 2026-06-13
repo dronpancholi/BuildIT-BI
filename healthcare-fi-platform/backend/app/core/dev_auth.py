@@ -22,7 +22,7 @@ DEV_ADMIN = DevUser(
     email="dev@buildit.health",
     full_name="Development Administrator",
     role="admin",
-    tenant_id=UUID("00000000-0000-0000-0000-000000000001"),
+    tenant_id=UUID("51267a17-735c-479a-979c-cd4c5f04cabb"),
 )
 
 DEV_CFO = DevUser(
@@ -30,7 +30,7 @@ DEV_CFO = DevUser(
     email="cfo@buildit.health",
     full_name="Development CFO",
     role="cfo",
-    tenant_id=UUID("00000000-0000-0000-0000-000000000001"),
+    tenant_id=UUID("51267a17-735c-479a-979c-cd4c5f04cabb"),
 )
 
 
