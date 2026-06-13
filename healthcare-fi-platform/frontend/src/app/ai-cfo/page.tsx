@@ -317,7 +317,9 @@ export default function AiCfoPage() {
                     </Badge>
                   </div>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{qa.answer}</p>
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap">
+                      {typeof qa.answer === 'string' ? qa.answer : (qa.answer as any)?.summary || JSON.stringify(qa.answer, null, 2)}
+                    </p>
                   </div>
                   {qa.evidence_chain && qa.evidence_chain.length > 0 && (
                     <div>

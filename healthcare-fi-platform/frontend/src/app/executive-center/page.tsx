@@ -494,12 +494,12 @@ export default function ExecutiveCenterPage() {
                         {kpi.status}
                       </Badge>
                     </div>
-                    <div className="text-2xl font-bold">{kpi.value.toLocaleString()}</div>
+                    <div className="text-2xl font-bold">{(kpi.value || 0).toLocaleString()}</div>
                     <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                      <span>Target: {kpi.target.toLocaleString()}</span>
+                      <span>Target: {(kpi.target || 0).toLocaleString()}</span>
                       <span className={`flex items-center gap-1 ${kpi.trend === 'up' ? 'text-emerald-600' : kpi.trend === 'down' ? 'text-red-600' : 'text-gray-600'}`}>
                         {kpi.trend === 'up' ? <TrendingUp className="h-3 w-3" /> : kpi.trend === 'down' ? <TrendingDown className="h-3 w-3" /> : null}
-                        {kpi.trend_percentage > 0 ? '+' : ''}{kpi.trend_percentage}%
+                        {(kpi.trend_percentage || 0) > 0 ? '+' : ''}{kpi.trend_percentage || 0}%
                       </span>
                     </div>
                     <div className="text-xs text-gray-400 mt-2">
@@ -737,9 +737,9 @@ export default function ExecutiveCenterPage() {
                             {(f.accuracy * 100).toFixed(0)}% accurate
                           </Badge>
                         </div>
-                        <div className="text-xl font-bold">{formatCurrency(f.forecasted)}</div>
+                        <div className="text-xl font-bold">{formatCurrency(f.forecasted || 0)}</div>
                         <div className="text-xs text-gray-500 mt-1">
-                          Range: {formatCurrency(f.confidence_low)} - {formatCurrency(f.confidence_high)}
+                          Range: {formatCurrency(f.confidence_low || 0)} - {formatCurrency(f.confidence_high || 0)}
                         </div>
                         <div className="text-xs text-gray-400 mt-1">Model: {f.model}</div>
                       </CardContent>
@@ -772,13 +772,13 @@ export default function ExecutiveCenterPage() {
                             {f.drivers.length} drivers
                           </Badge>
                         </div>
-                        <div className="text-xl font-bold">{formatCurrency(f.forecasted)}</div>
+                        <div className="text-xl font-bold">{formatCurrency(f.forecasted || 0)}</div>
                         {Object.keys(f.breakdown).length > 0 && (
                           <div className="mt-2 space-y-1">
                             {Object.entries(f.breakdown).map(([key, val]) => (
                               <div key={key} className="flex justify-between text-xs">
                                 <span className="text-gray-500">{key}</span>
-                                <span>{formatCurrency(val)}</span>
+                                <span>{formatCurrency(val || 0)}</span>
                               </div>
                             ))}
                           </div>
