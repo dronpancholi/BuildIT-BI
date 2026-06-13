@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { QueryProvider } from "@/lib/providers/QueryProvider";
+import { AuthProvider } from "@/lib/contexts/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,9 +15,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HealthFI - Healthcare Financial Intelligence Platform",
+  title: "BuildIT BI — Healthcare Financial Intelligence Platform",
   description: "AI-Native Healthcare Financial Intelligence Platform that transforms healthcare financial data into actionable insights, predictions, and recommendations.",
-  keywords: ["healthcare", "finance", "intelligence", "AI", "analytics", "dashboard"],
+  keywords: ["healthcare", "finance", "intelligence", "AI", "analytics", "dashboard", "BI"],
 };
 
 export default function RootLayout({
@@ -28,7 +30,13 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <QueryProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </QueryProvider>
+      </body>
     </html>
   );
 }
