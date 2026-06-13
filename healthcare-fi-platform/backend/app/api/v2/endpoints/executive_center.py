@@ -5,7 +5,7 @@ Uses real DB queries against revenue, expense, alert, claim, occupancy tables.
 """
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -94,65 +94,29 @@ async def get_kpi_dashboard(
     user: DevUser = Depends(dep_dev_user),
     db: AsyncSession = Depends(get_db),
 ):
-    since = _parse_time_range(time_range)
+    from app.core.data_fabric.query_engine import QueryEngine
+    
+    engine = QueryEngine(db, UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id)
+    summary = await engine.get_kpi_summary()
+    
     kpis = []
+    for kpi in summary["kpis"]:
+        kpis.append({
+            "name": kpi["name"],
+            "value": kpi["value"],
+            "target": kpi.get("target"),
+            "unit": kpi["unit"],
+            "status": kpi["status"],
+            "trend": "stable",
+            "trend_percentage": 0.0,
+            "last_updated": datetime.utcnow().isoformat(),
+            "data_points": 0,
+            "is_real_time": True,
+            "category": kpi["category"],
+            "benchmark": kpi.get("benchmark"),
+        })
 
-    # Total Revenue
-    r = await db.execute(text("SELECT COALESCE(SUM(net_amount), 0.0) FROM revenues WHERE created_at >= :since"), {"since": since})
-    total_revenue = r.scalar() or 0.0
-    r = await db.execute(text("SELECT COALESCE(SUM(net_amount), 0.0) FROM revenues WHERE created_at >= :prev_start AND created_at < :prev_end"),
-                         {"prev_start": since - (datetime.utcnow() - since), "prev_end": since})
-    prev_revenue = r.scalar() or 0.0
-    trend, pct = _trend_from_values(total_revenue, prev_revenue)
-    kpis.append({"name": "Total Revenue", "value": total_revenue, "target": total_revenue * 1.1, "unit": "USD",
-                 "status": _kpi_status(total_revenue, total_revenue * 1.1), "trend": trend, "trend_percentage": pct,
-                 "last_updated": datetime.utcnow().isoformat(), "data_points": 0, "is_real_time": True})
-
-    # Total Expenses
-    r = await db.execute(text("SELECT COALESCE(SUM(amount), 0.0) FROM expenses WHERE created_at >= :since"), {"since": since})
-    total_expenses = r.scalar() or 0.0
-    r = await db.execute(text("SELECT COALESCE(SUM(amount), 0.0) FROM expenses WHERE created_at >= :prev_start AND created_at < :prev_end"),
-                         {"prev_start": since - (datetime.utcnow() - since), "prev_end": since})
-    prev_expenses = r.scalar() or 0.0
-    etrend, epct = _trend_from_values(total_expenses, prev_expenses)
-    kpis.append({"name": "Total Expenses", "value": total_expenses, "target": total_revenue * 0.8, "unit": "USD",
-                 "status": _kpi_status(total_expenses, total_revenue * 0.8), "trend": etrend, "trend_percentage": epct,
-                 "last_updated": datetime.utcnow().isoformat(), "data_points": 0, "is_real_time": True})
-
-    # Net Profit
-    net_profit = total_revenue - total_expenses
-    profit_target = total_revenue * 0.2
-    np_trend, np_pct = _trend_from_values(net_profit, prev_revenue - prev_expenses)
-    kpis.append({"name": "Net Profit", "value": net_profit, "target": profit_target, "unit": "USD",
-                 "status": _kpi_status(net_profit, profit_target), "trend": np_trend, "trend_percentage": np_pct,
-                 "last_updated": datetime.utcnow().isoformat(), "data_points": 0, "is_real_time": True})
-
-    # Profit Margin
-    margin = (net_profit / total_revenue * 100) if total_revenue else 0
-    prev_margin = ((prev_revenue - prev_expenses) / prev_revenue * 100) if prev_revenue else 0
-    mtrend, mpct = _trend_from_values(margin, prev_margin)
-    kpis.append({"name": "Profit Margin", "value": round(margin, 1), "target": 20.0, "unit": "%",
-                 "status": _kpi_status(margin, 20.0), "trend": mtrend, "trend_percentage": mpct,
-                 "last_updated": datetime.utcnow().isoformat(), "data_points": 0, "is_real_time": True})
-
-    # Claims Pending
-    r = await db.execute(text("SELECT COUNT(*) FROM claims WHERE status = 'pending' AND created_at >= :since"), {"since": since})
-    pending_claims = r.scalar() or 0
-    r = await db.execute(text("SELECT COUNT(*) FROM claims WHERE created_at >= :since"), {"since": since})
-    total_claims = r.scalar() or 1
-    approval_rate = ((total_claims - pending_claims) / total_claims * 100) if total_claims else 0
-    kpis.append({"name": "Claim Approval Rate", "value": round(approval_rate, 1), "target": 95.0, "unit": "%",
-                 "status": _kpi_status(approval_rate, 95.0), "trend": "stable", "trend_percentage": 0.0,
-                 "last_updated": datetime.utcnow().isoformat(), "data_points": total_claims, "is_real_time": True})
-
-    # Occupancy Rate
-    r = await db.execute(text("SELECT COALESCE(AVG(occupancy_rate), 0.0) FROM occupancy WHERE date >= :since"), {"since": since})
-    avg_occupancy = r.scalar() or 0.0
-    kpis.append({"name": "Occupancy Rate", "value": round(avg_occupancy * 100, 1), "target": 85.0, "unit": "%",
-                 "status": _kpi_status(avg_occupancy * 100, 85.0), "trend": "stable", "trend_percentage": 0.0,
-                 "last_updated": datetime.utcnow().isoformat(), "data_points": 0, "is_real_time": True})
-
-    return {"data": kpis, "meta": {"total": len(kpis), "time_range": time_range}}
+    return {"kpis": kpis, "meta": {"total": len(kpis), "time_range": time_range, "overall_health": summary["overall_health"]}}
 
 
 # ============================================================
@@ -176,7 +140,7 @@ async def get_alerts(
     rows = r.all()
     items = [{"id": str(a[0]), "title": a[1], "message": a[2], "severity": a[3], "category": a[4],
               "is_read": a[5], "is_resolved": a[6], "created_at": a[7].isoformat() if a[7] else ""} for a in rows]
-    return {"data": items, "meta": {"total": len(items), "limit": limit}}
+    return {"alerts": items, "meta": {"total": len(items), "limit": limit}}
 
 
 @router.put("/alerts/{alert_id}/read")
@@ -233,7 +197,7 @@ async def get_decision_needs(
             "created_at": d["created_at"].isoformat() if hasattr(d.get("created_at"), "isoformat") else str(d.get("created_at", "")),
             "updated_at": d["updated_at"].isoformat() if hasattr(d.get("updated_at"), "isoformat") else str(d.get("updated_at", "")),
         })
-    return {"data": items, "meta": {"total": len(items)}}
+    return {"decisions": items, "meta": {"total": len(items)}}
 
 
 @router.post("/decisions")
@@ -317,13 +281,16 @@ async def get_performance_summary(
     user: DevUser = Depends(dep_dev_user),
     db: AsyncSession = Depends(get_db),
 ):
-    since = _parse_time_range(time_range)
-    r = await db.execute(text("SELECT COALESCE(SUM(net_amount), 0.0) FROM revenues WHERE created_at >= :since"), {"since": since})
-    total_rev = r.scalar() or 0.0
-    r = await db.execute(text("SELECT COALESCE(SUM(amount), 0.0) FROM expenses WHERE created_at >= :since"), {"since": since})
-    total_exp = r.scalar() or 0.0
-    margin = ((total_rev - total_exp) / total_rev * 100) if total_rev else 0
+    from app.core.data_fabric.query_engine import QueryEngine
+    
+    engine = QueryEngine(db, UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id)
+    kpi_summary = await engine.get_kpi_summary()
+    
+    total_rev = sum(k["value"] for k in kpi_summary["kpis"] if k["code"] in ("GROSS_REVENUE", "NET_REVENUE"))
+    total_exp = next((k["value"] for k in kpi_summary["kpis"] if k["code"] == "TOTAL_EXPENSES"), 0)
+    margin = next((k["value"] for k in kpi_summary["kpis"] if k["code"] == "NET_MARGIN"), 0)
     score = min(100, max(0, margin * 2 + 30))
+    
     return {"data": {
         "score": round(score, 1),
         "components": {"revenue": total_rev, "expenses": total_exp, "margin": round(margin, 1)},
@@ -370,7 +337,7 @@ async def get_revenue_forecast(
             "model": "linear_trend",
             "accuracy": 0.85,
         })
-    return {"data": forecasts, "meta": {"total": len(forecasts), "periods_ahead": periods_ahead}}
+    return {"forecasts": forecasts, "meta": {"total": len(forecasts), "periods_ahead": periods_ahead}}
 
 
 @router.get("/forecasts/cost")
@@ -401,7 +368,7 @@ async def get_cost_forecast(
             "drivers": list(breakdown.keys())[:3],
             "recommendations": ["Monitor expense categories for optimization"],
         })
-    return {"data": forecasts, "meta": {"total": len(forecasts), "periods_ahead": periods_ahead}}
+    return {"forecasts": forecasts, "meta": {"total": len(forecasts), "periods_ahead": periods_ahead}}
 
 
 # ============================================================
@@ -432,13 +399,13 @@ async def get_risk_summary(
     if unread_count > 5:
         risks.append({"name": "Alert Backlog", "description": f"{unread_count} unread alerts",
                        "probability": 0.5, "impact": 0.3, "risk_level": "medium", "mitigation": "Process unread alerts to stay informed"})
-    return {"data": {
+    return {
         "overall_risk_score": round(risk_score, 1),
         "risk_level": level,
         "risks": risks,
         "risk_categories": {"financial": critical_count, "operational": warning_count, "strategic": 0},
         "mitigation_suggestions": ["Review critical alerts daily", "Monitor key financial metrics"],
-    }, "meta": {"total": 1}}
+    }
 
 
 @router.post("/briefing")
@@ -448,17 +415,19 @@ async def generate_briefing(
     user: DevUser = Depends(dep_dev_user),
     db: AsyncSession = Depends(get_db),
 ):
-    since = _parse_time_range(req.period)
-    r = await db.execute(text("SELECT COALESCE(SUM(net_amount), 0.0) FROM revenues WHERE created_at >= :since"), {"since": since})
-    total_rev = r.scalar() or 0.0
-    r = await db.execute(text("SELECT COALESCE(SUM(amount), 0.0) FROM expenses WHERE created_at >= :since"), {"since": since})
-    total_exp = r.scalar() or 0.0
-    margin = ((total_rev - total_exp) / total_rev * 100) if total_rev else 0
-    r = await db.execute(text("SELECT COUNT(*) FROM alerts WHERE severity = 'critical'"))
-    crit = r.scalar() or 0
-    health = "healthy" if margin > 15 and crit == 0 else "warning" if margin > 5 else "critical"
+    from app.core.data_fabric.query_engine import QueryEngine
+    
+    engine = QueryEngine(db, UUID(tenant_id) if isinstance(tenant_id, str) else tenant_id)
+    kpi_summary = await engine.get_kpi_summary()
+    
+    total_rev = sum(k["value"] for k in kpi_summary["kpis"] if k["code"] in ("GROSS_REVENUE", "NET_REVENUE"))
+    total_exp = next((k["value"] for k in kpi_summary["kpis"] if k["code"] == "TOTAL_EXPENSES"), 0)
+    margin = next((k["value"] for k in kpi_summary["kpis"] if k["code"] == "NET_MARGIN"), 0)
+    crit = sum(1 for k in kpi_summary["kpis"] if k.get("status") == "critical")
+    health = kpi_summary["overall_health"]
+    
     narrative = f"Revenue: ${total_rev:,.0f} | Expenses: ${total_exp:,.0f} | Margin: {margin:.1f}% | Critical alerts: {crit}"
-    return {"data": {
+    return {
         "period": req.period,
         "period_type": req.period_type,
         "overall_health": health,
@@ -469,4 +438,4 @@ async def generate_briefing(
         "executive_summary": f"Financial health is {health}. Revenue of ${total_rev:,.0f} with {margin:.1f}% margin. {crit} critical alerts require attention.",
         "key_actions": ["Review critical alerts", "Monitor margin trends", "Assess expense categories"],
         "risks": [f"{crit} critical alerts" if crit else "No critical risks"],
-    }, "meta": {"total": 1}}
+    }

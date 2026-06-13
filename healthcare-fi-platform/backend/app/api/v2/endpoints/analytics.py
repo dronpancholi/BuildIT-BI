@@ -308,81 +308,19 @@ async def execute_semantic_query(
     db: AsyncSession = Depends(get_db),
     current_user: DevUser = Depends(dep_dev_admin),
 ):
-    from sqlalchemy import text
-    from datetime import datetime
-
-    start_time = datetime.utcnow()
-    metric_map = {
-        "revenue": ("revenues", "net_amount"),
-        "net_patient_revenue": ("revenues", "net_amount"),
-        "total_revenue": ("revenues", "amount"),
-        "expenses": ("expenses", "amount"),
-        "total_expenses": ("expenses", "amount"),
-        "claims": ("claims", "total_amount"),
-        "approved_claims": ("claims", "approved_amount"),
-        "denial_count": ("claims", "id"),
-        "occupancy_rate": ("occupancy", "occupancy_rate"),
-    }
-    result_rows = []
-    columns_used = []
-
-    for metric_name in query.metrics:
-        mapping = metric_map.get(metric_name.lower())
-        if not mapping:
-            continue
-        table, column = mapping
-        columns_used.append(metric_name)
-
-        if "department" in [d.lower() for d in query.dimensions]:
-            r = await db.execute(text(f"""
-                SELECT d.name as dimension_value, COALESCE(SUM(t.{column}), 0.0) as metric_value
-                FROM {table} t
-                JOIN departments d ON t.department_id = d.id
-                GROUP BY d.name
-            """))
-            for row in r.all():
-                result_rows.append({"dimension": "department", "value": row[0], "metric": metric_name, "total": float(row[1])})
-
-        elif "payer" in [d.lower() for d in query.dimensions]:
-            r = await db.execute(text(f"""
-                SELECT p.name as dimension_value, COALESCE(SUM(t.{column}), 0.0) as metric_value
-                FROM {table} t
-                JOIN payers p ON t.payer_id = p.id
-                GROUP BY p.name
-            """))
-            for row in r.all():
-                result_rows.append({"dimension": "payer", "value": row[0], "metric": metric_name, "total": float(row[1])})
-
-        elif "month" in [d.lower() for d in query.dimensions] or "date" in [d.lower() for d in query.dimensions]:
-            date_col = "service_date" if table == "revenues" else "expense_date" if table == "expenses" else "date" if table == "occupancy" else "created_at"
-            r = await db.execute(text(f"""
-                SELECT DATE_TRUNC('month', {date_col}) as dimension_value, COALESCE(SUM({column}), 0.0) as metric_value
-                FROM {table}
-                GROUP BY DATE_TRUNC('month', {date_col})
-                ORDER BY DATE_TRUNC('month', {date_col})
-            """))
-            for row in r.all():
-                val = row[0].strftime("%Y-%m") if hasattr(row[0], "strftime") else str(row[0])
-                result_rows.append({"dimension": "month", "value": val, "metric": metric_name, "total": float(row[1])})
-        else:
-            r = await db.execute(text(f"SELECT COALESCE(SUM({column}), 0.0) FROM {table}"))
-            total = r.scalar() or 0
-            result_rows.append({"metric": metric_name, "total": float(total)})
-
-    execution_time_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
-
+    from app.core.data_fabric.query_engine import QueryEngine
+    
+    engine = QueryEngine(db, UUID(str(current_user.tenant_id)))
+    result = await engine.query(
+        metrics=query.metrics,
+        dimensions=query.dimensions,
+        filters={f.get("field"): f.get("value") for f in query.filters} if query.filters else {},
+        date_range=None,
+        limit=query.limit,
+    )
     return {
         "status": "success",
-        "data": {
-            "query_id": str(uuid4()),
-            "status": "completed",
-            "columns": columns_used,
-            "rows": result_rows,
-            "row_count": len(result_rows),
-            "execution_time_ms": round(execution_time_ms, 1),
-            "requested_metrics": query.metrics,
-            "requested_dimensions": query.dimensions,
-        },
+        "data": result,
         "meta": {"request_id": str(uuid4())},
     }
 
