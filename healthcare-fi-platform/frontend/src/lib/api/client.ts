@@ -109,8 +109,9 @@ export const analyticsAPI = {
 };
 
 export const exportsAPI = {
-  exportBoardPack: (format: 'pdf' | 'excel' | 'ppt') =>
-    v2.post(`/exports/board-pack?format=${format}`, {}, { responseType: 'blob' }),
+  getJobs: () => v2.get('/exports'),
+  createJob: (data: { name: string; format: string }) =>
+    v2.post('/exports', data),
 };
 
 export const assistantAPI = {

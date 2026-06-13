@@ -10,6 +10,7 @@ from app.api.v2.endpoints.exports import router as exports_router
 from app.api.v2.endpoints.forecasting import router as forecasting_router
 from app.api.v2.endpoints.executive_center import router as executive_router
 from app.api.v2.endpoints.data_import import router as data_import_router
+from app.api.v2.endpoints.executive_assistant import router as assistant_router
 
 v2_router = APIRouter()
 v2_router.include_router(api_router)
@@ -19,5 +20,6 @@ v2_router.include_router(exports_router, prefix="/exports", tags=["Board Pack Ex
 v2_router.include_router(forecasting_router, prefix="/forecasting", tags=["Executive Forecasting"])
 v2_router.include_router(executive_router, prefix="/executive", tags=["Executive Command Center"])
 v2_router.include_router(data_import_router, prefix="/data_import", tags=["Data Import Center"])
+v2_router.include_router(assistant_router, prefix="/executive_assistant", tags=["Executive Assistant AI"])
 
 __all__ = ["v2_router"]
