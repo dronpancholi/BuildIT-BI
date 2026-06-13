@@ -133,8 +133,17 @@ export default function RevenuePage() {
 
       const res = await aiEverywhereAPI.ask({
         question: 'Provide 3 concise revenue insights: one positive trend, one risk/warning, and one opportunity. Each insight must reference actual numbers from the context. Return JSON array: [{title, body, type}] where type is "positive", "warning", or "opportunity".',
-        context,
-        response_format: 'json',
+        page_context: {
+          page: 'revenue',
+          metrics: Object.keys(kpiData),
+          filters: {
+            top_department: deptData[0]?.name,
+            top_payer: payerData[0]?.name,
+            revenue_value: kpiData.total_revenue?.value,
+            change_percent: kpiData.total_revenue?.change_percent,
+            payer_count: payerData.length,
+          },
+        },
       });
 
       // Parse AI response
