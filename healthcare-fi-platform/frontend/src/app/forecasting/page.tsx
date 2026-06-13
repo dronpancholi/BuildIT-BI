@@ -28,6 +28,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { forecastingAPI } from '@/lib/api/client';
+import { ForecastChart } from '@/components/charts/ForecastChart';
 
 interface ForecastModel {
   id: string;
@@ -518,9 +519,32 @@ export default function ForecastingPage() {
                   </div>
                 )}
 
+                {/* Forecast Chart */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Forecast Results</CardTitle>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-blue-400" />
+                      Forecast Visualization
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ForecastChart
+                      data={forecastResult.dates.map((date, i) => ({
+                        date,
+                        actual: forecastResult.actual[i] ?? undefined,
+                        predicted: forecastResult.forecast[i],
+                        lower: forecastResult.lower_bound[i],
+                        upper: forecastResult.upper_bound[i],
+                      }))}
+                      height={340}
+                      color="#6366f1"
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Forecast Results Table</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="overflow-x-auto">

@@ -10,7 +10,6 @@ import {
   TrendingUp,
   Brain,
   BarChart3,
-  GitBranch,
   AlertTriangle,
   Settings,
   ChevronLeft,
@@ -18,7 +17,6 @@ import {
   LogOut,
   User,
   GitMerge,
-  LineChart,
   Network,
   BarChart,
   LayoutGrid,
@@ -26,19 +24,19 @@ import {
   Download,
   MessageSquare,
   Shield,
-  Eye,
   Palette,
   Code,
-  Rocket,
   DollarSign,
   Zap,
   Target,
-  Cpu,
   BookOpen,
   Layers,
   Activity,
   Command,
   Bot,
+  Building2,
+  FileText,
+  BedDouble,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -68,21 +66,30 @@ const navigation: NavSection[] = [
     label: 'Command',
     items: [
       { name: 'Command Center', href: '/dashboard', icon: LayoutDashboard },
-      { name: 'AI CFO Core', href: '/ai-cfo', icon: Zap },
       { name: 'Executive Center', href: '/executive-center', icon: Command },
+      { name: 'AI CFO Core', href: '/ai-cfo', icon: Zap },
       { name: 'AI CFO Copilot', href: '/copilot', icon: Bot },
+      { name: 'Workspace', href: '/workspace', icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: 'Financial Performance',
+    items: [
+      { name: 'Revenue Intelligence', href: '/revenue', icon: TrendingUp },
+      { name: 'Departments', href: '/departments', icon: Building2 },
+      { name: 'Claims & Denials', href: '/claims', icon: FileText },
+      { name: 'Occupancy', href: '/occupancy', icon: BedDouble },
     ],
   },
   {
     label: 'Intelligence',
     items: [
-      { name: 'Revenue Intelligence', href: '/revenue', icon: TrendingUp },
+      { name: 'Intelligence Hub', href: '/intelligence', icon: Activity },
       { name: 'AI Insights', href: '/insights', icon: Brain },
-      { name: 'Intelligence', href: '/intelligence', icon: Activity },
       { name: 'Decisions', href: '/decisions', icon: GitMerge },
-      { name: 'Forecasts', href: '/forecasts', icon: LineChart },
-      { name: 'Strategic Planning', href: '/strategic', icon: Target },
       { name: 'Forecasting', href: '/forecasting', icon: BarChart3 },
+      { name: 'Strategic Planning', href: '/strategic', icon: Target },
+      { name: 'Alert Center', href: '/alerts', icon: AlertTriangle },
     ],
   },
   {
@@ -96,27 +103,15 @@ const navigation: NavSection[] = [
     ],
   },
   {
-    label: 'Knowledge',
-    items: [
-      { name: 'Knowledge Graph', href: '/knowledge-graph', icon: Network },
-    ],
-  },
-  {
-    label: 'Operations',
-    items: [
-      { name: 'Collaboration', href: '/collaboration', icon: MessageSquare },
-      { name: 'Workspace', href: '/workspace', icon: LayoutDashboard },
-      { name: 'Alert Center', href: '/alerts', icon: AlertTriangle },
-    ],
-  },
-  {
     label: 'Platform',
     items: [
-      { name: 'Governance', href: '/governance', icon: Shield },
-      { name: 'Formula Editor', href: '/formulas', icon: Code },
       { name: 'Metric Studio', href: '/metric-studio', icon: BarChart3 },
       { name: 'Semantic Layer', href: '/semantic', icon: Layers },
-      { name: 'Auth & RBAC', href: '/auth', icon: Shield },
+      { name: 'Formula Editor', href: '/formulas', icon: Code },
+      { name: 'Knowledge Graph', href: '/knowledge-graph', icon: Network },
+      { name: 'Governance', href: '/governance', icon: Shield },
+      { name: 'Collaboration', href: '/collaboration', icon: MessageSquare },
+      { name: 'Learning Engine', href: '/learning', icon: BookOpen },
       { name: 'Settings', href: '/settings', icon: Settings },
     ],
   },
@@ -165,10 +160,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex h-16 items-center justify-between px-4">
           {!collapsed && (
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <span className="text-sm font-bold text-primary-foreground">HFI</span>
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600">
+                <span className="text-xs font-bold text-white">BI</span>
               </div>
-              <span className="text-lg font-semibold">HealthFI</span>
+              <span className="text-lg font-semibold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">BuildIT BI</span>
             </div>
           )}
           <Button
