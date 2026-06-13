@@ -5,12 +5,23 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from pydantic import BaseModel, Field
+
 from app.core.dev_auth import DevUser, dep_dev_admin
 from app.db.session import get_db
 from app.infrastructure.persistence.repositories import (
     CFOWorkspaceRepository,
     CFOBriefingRepository,
 )
+
+class NotificationUpdateRequest(BaseModel):
+    channel: Optional[str] = None
+    channel_enabled: Optional[bool] = None
+    preference_key: Optional[str] = None
+    preference_enabled: Optional[bool] = None
+    quiet_hours_enabled: Optional[bool] = None
+    quiet_hours_start: Optional[str] = None
+    quiet_hours_end: Optional[str] = None
 
 router = APIRouter(tags=["Executive Workspace"])
 
@@ -206,13 +217,7 @@ async def get_notification_config(
 
 @router.put("/notifications/config")
 async def update_notification_config(
-    channel: str = Query(default=None, description="email, in_app, slack, sms"),
-    channel_enabled: bool = Query(default=None),
-    preference_key: str = Query(default=None),
-    preference_enabled: bool = Query(default=None),
-    quiet_hours_enabled: bool = Query(default=None),
-    quiet_hours_start: str = Query(default=None),
-    quiet_hours_end: str = Query(default=None),
+    req: NotificationUpdateRequest,
     current_user: DevUser = Depends(dep_dev_admin),
 ):
     """Update notification preferences."""
@@ -221,15 +226,15 @@ async def update_notification_config(
         "updated_at": datetime.utcnow().isoformat(),
         "changes": [],
     }
-    if channel:
-        result["changes"].append({"type": "channel", "channel": channel, "enabled": channel_enabled})
-    if preference_key:
-        result["changes"].append({"type": "preference", "key": preference_key, "enabled": preference_enabled})
-    if quiet_hours_enabled is not None:
+    if req.channel:
+        result["changes"].append({"type": "channel", "channel": req.channel, "enabled": req.channel_enabled})
+    if req.preference_key:
+        result["changes"].append({"type": "preference", "key": req.preference_key, "enabled": req.preference_enabled})
+    if req.quiet_hours_enabled is not None:
         result["changes"].append({
             "type": "quiet_hours",
-            "enabled": quiet_hours_enabled,
-            "start": quiet_hours_start,
-            "end": quiet_hours_end,
+            "enabled": req.quiet_hours_enabled,
+            "start": req.quiet_hours_start,
+            "end": req.quiet_hours_end,
         })
     return {"status": "success", "data": result, "meta": {"request_id": str(uuid4())}}
