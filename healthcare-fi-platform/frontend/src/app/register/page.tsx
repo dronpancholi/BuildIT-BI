@@ -99,7 +99,7 @@ export default function RegisterPage() {
         email: form.email,
         password: form.password,
         full_name: form.full_name,
-        role: form.role,
+        role: 'viewer',
       });
       // Auto-login after successful registration
       const loginRes = await authAPI.login(form.email, form.password);
