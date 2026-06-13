@@ -14,8 +14,8 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Free model — fast, good for finance, small context window is fine
-DEFAULT_MODEL = "meta/llama-3.1-8b-instruct"
+# GPT OSS 120B — large, capable, free tier
+DEFAULT_MODEL = "openai/gpt-oss-120b"
 MAX_RPM = 40  # Free tier limit
 RPM_WINDOW = 60.0  # seconds
 
