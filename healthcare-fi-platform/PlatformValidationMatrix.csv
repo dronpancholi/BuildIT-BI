@@ -1,0 +1,40 @@
+Page,Route,Loads,API_Calls_Fire,Receives_Data,Writes_Data,Persists_Data,Refresh_Safe,Workflow_Complete,Status,Notes
+/ (root),/,Yes,No (redirect only),No,No,No,N/A,N/A,WORKING,Redirects to /dashboard
+/login,/login,Yes,authAPI.login(),Yes (token),Yes (token in localStorage),Yes (localStorage),N/A,N/A,WORKING,Full auth flow with token storage and redirect
+/register,/register,Yes,authAPI.register(),No (redirect on success),Yes (creates account),No,N/A,N/A,WORKING,Registration with password strength meter
+/auth,/auth,Yes,governanceAPI (roles; policies; audit log),Yes,Yes (CRUD roles/policies),No,Yes,Yes,WORKING,Full CRUD with tabs for roles/policies/audit
+/dashboard,/dashboard,Yes,kpiAPI.getExecutiveSummary(); insightsAPI.getComprehensiveInsights(),Yes,No,No,Yes (Promise.allSettled),N/A,WORKING,Graceful degradation via Promise.allSettled
+/dashboards,/dashboards,Yes,dashboardsAPI (list; create; delete; duplicate; versions; templates),Yes,Yes (create/delete/duplicate/version),No,Yes,Yes,WORKING,Full CRUD with versioning and templates
+/analytics,/analytics,Yes,analyticsAPI (metrics; dimensions; reports; query),Yes,Yes (create metric/dimension; execute query),No,Yes,Yes,WORKING,Full CRUD for metrics/dimensions + report execution
+/analytics/query,/analytics/query,Yes,queryAPI (execute; generateSQL; saved queries; templates),Yes,Yes (save/delete queries),No,Yes,Yes,WORKING,SQL editor with save/execute functionality
+/alerts,/alerts,Yes,alertsAPI.listAlerts(); alertsAPI.getStats(),Yes,Yes (markAsRead; markAllAsRead),No,Yes,N/A,WORKING,Alert listing with read/unread management
+/ai-cfo,/ai-cfo,Yes,aiCfoAPI (questions; briefings; workspaces; alerts),Yes,Yes (CRUD questions; briefings; workspaces),No,Yes,Yes,WORKING,Full CRUD for AI CFO workspace
+/collaboration,/collaboration,Yes,collaborationAPI (comments; threads; assignments; watchlists),Yes,Yes (CRUD comments; threads; assignments),No,Yes,Yes,WORKING,Full collaboration CRUD
+/copilot,/copilot,Yes,copilotAPI (query; suggestions; history; capabilities),Yes,Yes (process query; archive conversation),No,Yes,Yes,WORKING,Chat interface with suggestion history
+/decisions,/decisions,Yes,DecisionCenter: decisionsAPI (list; propose; submit; approve; start; complete; timeline; value),Yes,Yes (propose; workflow actions),No,Yes,Yes,WORKING,Delegates to 4 sub-components; all use v2 API
+/decisions,/decisions,Yes,OutcomeCenter: outcomesAPI (list; define; measurements; trajectory),Yes,Yes (define outcomes),No,Yes,Yes,WORKING,Outcome tracking with trajectory visualization
+/decisions,/decisions,Yes,FeatureCatalog: featuresAPI (list; register; search; validate),Yes,Yes (register features),No,Yes,Yes,WORKING,ML feature registry with validation
+/decisions,/decisions,Yes,ModelRegistry: modelsAPI (list; register; approve; retire),Yes,Yes (register; approve; retire),No,Yes,Yes,WORKING,Model lifecycle management
+/executive-center,/executive-center,Yes,executiveAPI (kpis; alerts; decisions; summary; forecasts; risks; briefing),Yes,No (read-only dashboard),No,Yes,N/A,WORKING,Read-only executive dashboard with alert management
+/exports,/exports,Yes,exportsAPI (jobs; formats; schedule; subscriptions),Yes,Yes (create job; schedule; subscribe),No,Yes,Yes,WORKING,Export job management with scheduling
+/forecasting,/forecasting,Yes,forecastingAPI (models; train; forecast; evaluate; compare; drift; methods),Yes,Yes (create model; train; generate forecast),No,Yes,Yes,WORKING,Full ML model lifecycle with comparison
+/forecasts,/forecasts,Yes,forecastsAPI.createForecast(),No (on-demand only),Yes (generates forecast),No,N/A,N/A,WORKING,On-demand forecast generation only; no initial load
+/formulas,/formulas,Yes,bflAPI (validate; generateSql; functions; publish; list),Yes,Yes (validate; compile; publish),No,Yes,Yes,WORKING,Formula editor with validation and publishing
+/governance,/governance,Yes,governanceAPI (certified metrics; approvals; usage; audit),Yes,Yes (certify; approve; reject),No,Yes,Yes,WORKING,Governance with certification and approval workflows
+/insights,/insights,Yes,insightsAPI.getComprehensiveInsights(); AICFOChat component,Yes,No (read-only),No,Yes,N/A,WORKING,Read-only insights with AI chat
+/intelligence,/intelligence,Yes,IntelligenceFeed: intelligenceAPI.getFeed(),Yes,No (read-only feed),No,Yes,N/A,WORKING,Intelligence feed with error classification
+/intelligence,/intelligence,Yes,AnomalyCenter: intelligenceAPI.listAnomalies(),Yes,No (read-only),No,Yes,N/A,WORKING,Anomaly listing with filtering
+/intelligence,/intelligence,Yes,OpportunityCenter: intelligenceAPI.listOpportunities(),Yes,No (read-only),No,Yes,N/A,WORKING,Opportunity listing with detail dialogs
+/intelligence,/intelligence,Yes,RecommendationCenter: intelligenceAPI (list; approve),Yes,Yes (approve recommendations),No,Yes,Yes,WORKING,Recommendation management with approve/reject
+/intelligence,/intelligence,Yes,BriefingLibrary: intelligenceAPI.listBriefings(),Yes,No (read-only),No,Yes,N/A,WORKING,Briefing library with detail panels
+/intelligence,/intelligence,Yes,IntelligenceGraphExplorer: intelligenceAPI (getGraphNodes; listRelationships; getGraphNeighbors),Yes,No (read-only graph),No,Yes,N/A,WORKING,Graph visualization with node inspection
+/knowledge-graph,/knowledge-graph,Yes,KnowledgeGraphExplorer: graphAPI (stats; pathway; impact; validation; contradictions; edges); intelligenceAPI (nodes; relationships),Yes,No (read-only graph),No,Yes,N/A,WORKING,Full knowledge graph with SVG visualization and validation
+/learning,/learning,Yes,LearningDashboard: learningAPI (metrics; accuracy; adoption; patterns; adjustments; dashboard),Yes,No (read-only analytics),No,Yes,N/A,WORKING,Read-only learning analytics dashboard
+/metric-studio,/metric-studio,Yes,metricStudioAPI (list; create; update; publish; certify; deprecate; versions; rollback; dependencies; impact; delete),Yes,Yes (create; update; publish; certify; rollback; delete),No,Yes,Yes,WORKING,Full metric lifecycle management
+/revenue,/revenue,Yes,kpiAPI (revenue; by-department; by-payer),Yes,No (read-only),No,Yes,N/A,WORKING,Revenue KPI dashboard with department and payer mix
+/scenarios,/scenarios,Yes,scenariosAPI (simulate; pricing; expansion; staffing; save; list),Yes,Yes (run scenarios; save),No,N/A,N/A,WORKING,On-demand scenario simulation with save
+/semantic,/semantic,Yes,semanticLayerAPI (dimensions; fact-tables; relationships; hierarchies; aliases),Yes,Yes (create all entity types),No,Yes,Yes,WORKING,Full semantic layer CRUD
+/settings,/settings,Yes,authAPI.getMe(); authAPI.updateMe(); workspaceAPI.getNotifications(); workspaceAPI.updateNotifications(),Yes,Yes (profile; notifications),Yes (via API),Yes,Yes,WORKING,Full API integration for profile and notification settings
+/strategic,/strategic,Yes,strategicAPI (scenarios; monte-carlo; what-if; sensitivity; risks; driver-trees; compare),Yes,Yes (create; run; compare; build driver tree),No,Yes,Yes,WORKING,Full strategic analysis suite
+/visualization,/visualization,Yes,visualizationAPI (chart-types; specs; color-schemes; config),Yes,Yes (create; update; render specs),No,Yes,Yes,WORKING,Chart spec builder with rendering
+/workspace,/workspace,Yes,workspaceAPI (sections; briefings; notifications); intelligenceAPI; decisionsAPI,Yes,Yes (update sections; generate briefing; mark read),No,Yes,Yes,WORKING,Workspace with briefings and notification config

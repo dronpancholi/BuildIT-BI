@@ -1,0 +1,276 @@
+services:
+  # ============================
+  # CORE SERVICES
+  # ============================
+  
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: healthcare_fi_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: healthcare_fi
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: healthcare_fi_redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================
+  # ANALYTICAL SERVICES
+  # ============================
+  
+  duckdb:
+    image: python:3.12-slim
+    container_name: healthcare_fi_duckdb
+    working_dir: /app
+    volumes:
+      - ./duckdb:/app
+      - duckdb_data:/data
+    command: >
+      sh -c "pip install duckdb && python -m http.server 8080"
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import duckdb; conn = duckdb.connect('/data/healthcare.duckdb'); print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================
+  # TEMPORAL WORKFLOW SERVICES
+  # ============================
+  
+  temporal_postgres:
+    image: postgres:16-alpine
+    container_name: healthcare_fi_temporal_postgres
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_DB: temporal
+    ports:
+      - "5435:5432"
+    volumes:
+      - temporal_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  temporal:
+    image: temporalio/auto-setup:1.25.0
+    container_name: healthcare_fi_temporal
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal_postgres
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - ENABLE_ES=false
+    ports:
+      - "7233:7233"
+      - "8234:8233"
+    depends_on:
+      temporal_postgres:
+        condition: service_healthy
+    volumes:
+      - temporal_data:/etc/temporal/config/data
+      - ./config/dynamicconfig:/etc/temporal/config/dynamicconfig
+
+  temporal_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: healthcare_fi_temporal_worker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/healthcare_fi
+      DATABASE_SYNC_URL: postgresql://postgres:postgres@postgres:5432/healthcare_fi
+      REDIS_URL: redis://redis:6379/0
+      TEMPORAL_HOST: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      ENVIRONMENT: development
+    depends_on:
+      temporal:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    command: python -m app.infrastructure.temporal.worker
+
+  # ============================
+  # APPLICATION SERVICES
+  # ============================
+  
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: healthcare_fi_backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/healthcare_fi
+      DATABASE_SYNC_URL: postgresql://postgres:postgres@postgres:5432/healthcare_fi
+      REDIS_URL: redis://redis:6379/0
+      DUCKDB_PATH: /data/healthcare.duckdb
+      TEMPORAL_HOST: temporal:7233
+      TEMPORAL_NAMESPACE: default
+      SECRET_KEY: your-secret-key-change-in-production
+      NVIDIA_NIM_API_KEY: ${NVIDIA_NIM_API_KEY:-}
+      NVIDIA_NIM_BASE_URL: https://integrate.api.nvidia.com/v1
+      ENVIRONMENT: development
+      DEBUG: "true"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+      - duckdb_data:/data
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: healthcare_fi_frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_TEMPORAL_URL: http://localhost:8233
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+
+  # ============================
+  # QUEUE SERVICES
+  # ============================
+  
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: healthcare_fi_celery
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/healthcare_fi
+      REDIS_URL: redis://redis:6379/0
+      DUCKDB_PATH: /data/healthcare.duckdb
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - duckdb_data:/data
+    command: celery -A app.core.celery_app worker --loglevel=info --concurrency=4
+
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: healthcare_fi_celery_beat
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/healthcare_fi
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.core.celery_app beat --loglevel=info
+
+  # ============================
+  # MONITORING SERVICES
+  # ============================
+  
+  flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: healthcare_fi_flower
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/healthcare_fi
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    depends_on:
+      - celery_worker
+    command: celery -A app.core.celery_app flower --port=5555
+
+  # ============================
+  # DATA SERVICES
+  # ============================
+  
+  data_sync:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: healthcare_fi_data_sync
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/healthcare_fi
+      DATABASE_SYNC_URL: postgresql://postgres:postgres@postgres:5432/healthcare_fi
+      DUCKDB_PATH: /data/healthcare.duckdb
+    depends_on:
+      postgres:
+        condition: service_healthy
+      duckdb:
+        condition: service_healthy
+    volumes:
+      - duckdb_data:/data
+    command: python -m app.infrastructure.data_sync.sync_service
+    restart: "no"
+
+  # ============================
+  # INIT SERVICES
+  # ============================
+  
+  db_init:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: healthcare_fi_db_init
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/healthcare_fi
+      DATABASE_SYNC_URL: postgresql://postgres:postgres@postgres:5432/healthcare_fi
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: >
+      sh -c "
+        alembic upgrade head &&
+        python -m app.infrastructure.seed
+      "
+    restart: "no"
+
+volumes:
+  postgres_data:
+  redis_data:
+  duckdb_data:
+  temporal_postgres_data:
+  temporal_data:
