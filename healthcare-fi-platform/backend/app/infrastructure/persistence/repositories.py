@@ -848,6 +848,9 @@ class ExecutiveDecisionRepository:
         self.session = session
 
     async def create(self, **kwargs) -> dict:
+        from uuid import uuid4
+        if 'id' not in kwargs:
+            kwargs['id'] = uuid4()
         model = ExecutiveDecisionModel(**kwargs)
         self.session.add(model)
         await self.session.flush()

@@ -25,6 +25,7 @@ from app.api.v2.endpoints.forecasting import router as forecasting_router
 from app.api.v2.endpoints.executive_center import router as executive_router
 from app.api.v2.endpoints.copilot import router as copilot_router
 from app.api.v2.endpoints.intelligence import router as intelligence_router
+from app.api.v2.endpoints.ai_everywhere import router as ai_everywhere_router
 
 v2_router = APIRouter()
 v2_router.include_router(api_router)
@@ -49,5 +50,6 @@ v2_router.include_router(forecasting_router, prefix="/forecasting", tags=["Enter
 v2_router.include_router(executive_router, prefix="/executive", tags=["Executive Command Center — KPIs, Briefings, Forecasts"])
 v2_router.include_router(copilot_router, prefix="/copilot", tags=["AI CFO Copilot — Natural Language Interface"])
 v2_router.include_router(intelligence_router, prefix="/intelligence", tags=["Intelligence Engine — Insights, Anomalies, Recommendations"])
+v2_router.include_router(ai_everywhere_router, prefix="/ai", tags=["AI Everywhere — Ask AI About This"])
 
 __all__ = ["v2_router"]
