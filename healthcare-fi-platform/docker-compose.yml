@@ -132,7 +132,7 @@ services:
       TEMPORAL_HOST: temporal:7233
       TEMPORAL_NAMESPACE: default
       SECRET_KEY: your-secret-key-change-in-production
-      NVIDIA_NIM_API_KEY: ${NVIDIA_NIM_API_KEY:-}
+      NVIDIA_NIM_API_KEY: ${NVIDIA_NIM_API_KEY:-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}
       NVIDIA_NIM_BASE_URL: https://integrate.api.nvidia.com/v1
       ENVIRONMENT: development
       DEBUG: "true"

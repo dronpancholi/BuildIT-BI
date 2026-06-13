@@ -230,19 +230,54 @@ def _build_evidence_chain(
     return evidence
 
 
-def _generate_answer(
+async def _generate_answer(
     intent: Intent,
     query: str,
     context: Dict[str, Any],
     evidence_chain: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
+    """Generate an answer using the NIM LLM with healthcare finance context."""
+    from app.infrastructure.nim.llm_client import get_llm_client
+
+    system_prompt = (
+        "You are an AI Chief Financial Officer for a healthcare organization. "
+        "Answer financial questions with specific, actionable insights. "
+        "Use healthcare finance terminology. Be concise (2-4 sentences max). "
+        "If you lack specific data, state what you would analyze."
+    )
+
+    context_str = ""
+    if context.get("entities"):
+        context_str = f"\nContext entities: {', '.join(str(e) for e in context['entities'][:5])}"
+    if context.get("time_range"):
+        context_str += f"\nTime range: {context['time_range']}"
+
+    user_prompt = (
+        f"Intent: {intent.value}\n"
+        f"Question: {query}"
+        f"{context_str}\n\n"
+        f"Provide a direct, professional CFO-level answer."
+    )
+
+    llm = get_llm_client()
+    summary = await llm.complete(
+        prompt=user_prompt,
+        system=system_prompt,
+        temperature=0.3,
+        max_tokens=300,
+    )
+
+    # Fallback if LLM fails
+    if not summary:
+        summary = f"Analysis for '{query}' under intent {intent.value}."
+
     return {
         "intent": intent.value,
         "query": query,
         "entities": context.get("entities", []),
         "time_range": context.get("time_range"),
         "evidence_count": len(evidence_chain),
-        "summary": f"Analysis for '{query}' under intent {intent.value}.",
+        "summary": summary,
     }
 
 
@@ -361,7 +396,7 @@ class CFOCoreService:
 
     # ---- Question handling ------------------------------------------------
 
-    def ask_question(
+    async def ask_question(
         self,
         tenant_id: UUID,
         user_id: UUID,
@@ -372,7 +407,7 @@ class CFOCoreService:
         intent = _classify_intent(user_query)
         routing = _build_routing(intent, user_query)
         evidence_chain = _build_evidence_chain(intent, ctx)
-        answer = _generate_answer(intent, user_query, ctx, evidence_chain)
+        answer = await _generate_answer(intent, user_query, ctx, evidence_chain)
         confidence = min(1.0, 0.6 + 0.1 * len(evidence_chain))
 
         question = Question(

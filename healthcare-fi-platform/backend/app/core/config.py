@@ -28,11 +28,8 @@ class Settings(BaseSettings):
         "http://localhost:3001",
     ]
     
-    NVIDIA_NIM_API_KEY: str = os.getenv("NVIDIA_NIM_API_KEY", "")
-    NVIDIA_NIM_BASE_URL: str = os.getenv(
-        "NVIDIA_NIM_BASE_URL",
-        "https://integrate.api.nvidia.com/v1"
-    )
+    NVIDIA_NIM_API_KEY: str = ""
+    NVIDIA_NIM_BASE_URL: str = "https://integrate.api.nvidia.com/v1"
     
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     DEBUG: bool = os.getenv("DEBUG", "true").lower() == "true"

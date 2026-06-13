@@ -113,7 +113,7 @@ class BriefingEngine:
         # Generate narrative
         narrative = ""
         if options.include_narrative:
-            narrative = self._generate_narrative(
+            narrative = await self._generate_narrative(
                 executive_summary, sections, key_highlights
             )
 
@@ -136,7 +136,7 @@ class BriefingEngine:
             metrics_snapshot=[metrics_snapshot],
             narrative=narrative,
             briefing_status=BriefingStatus.DRAFT,
-            generation_method="template_generation",
+            generation_method="llm_generation",
             generation_duration_ms=int((time.time() - start_time) * 1000),
             scope_type=ScopeType.TENANT,
             scope_id=context.scope.get("scope_id") if context.scope else None,
@@ -486,35 +486,64 @@ class BriefingEngine:
             confidence=0.8,
         )
 
-    def _generate_narrative(
+    async def _generate_narrative(
         self,
         summary: BriefingSummary,
         sections: List[BriefingSection],
         highlights: List[BriefingHighlight]
     ) -> str:
         """
-        Generate full briefing narrative.
+        Generate full briefing narrative using LLM.
         """
-        narrative_parts = []
+        from app.infrastructure.nim.llm_client import get_llm_client
 
-        # Executive summary
-        narrative_parts.append(f"**Executive Summary**\n{summary.narrative}\n")
-
-        # Key highlights
-        if highlights:
-            narrative_parts.append("**Key Highlights**")
-            for highlight in highlights:
-                narrative_parts.append(
-                    f"- [{highlight.priority}] {highlight.title}: {highlight.description}"
-                )
-            narrative_parts.append("")
-
-        # Section narratives
+        # Build context for LLM
+        section_text = ""
         for section in sections:
             if section.content:
-                narrative_parts.append(f"**{section.title}**\n{section.content}\n")
+                section_text += f"- {section.title}: {section.content[:200]}\n"
 
-        return "\n".join(narrative_parts)
+        highlight_text = ""
+        for h in highlights[:5]:
+            highlight_text += f"- [{h.priority}] {h.title}: {h.description[:100]}\n"
+
+        system_prompt = (
+            "You are an AI executive briefing writer for a healthcare CFO. "
+            "Write a professional, concise executive briefing narrative. "
+            "Use markdown. Be specific with numbers. Keep it under 300 words."
+        )
+
+        user_prompt = (
+            f"Executive Summary: {summary.narrative}\n\n"
+            f"Key Highlights:\n{highlight_text}\n"
+            f"Sections:\n{section_text}\n\n"
+            f"Write a polished executive briefing narrative combining these elements."
+        )
+
+        llm = get_llm_client()
+        narrative = await llm.complete(
+            prompt=user_prompt,
+            system=system_prompt,
+            temperature=0.3,
+            max_tokens=512,
+        )
+
+        if not narrative:
+            # Fallback to template
+            narrative_parts = []
+            narrative_parts.append(f"**Executive Summary**\n{summary.narrative}\n")
+            if highlights:
+                narrative_parts.append("**Key Highlights**")
+                for highlight in highlights:
+                    narrative_parts.append(
+                        f"- [{highlight.priority}] {highlight.title}: {highlight.description}"
+                    )
+            for section in sections:
+                if section.content:
+                    narrative_parts.append(f"**{section.title}**\n{section.content}\n")
+            narrative = "\n".join(narrative_parts)
+
+        return narrative
 
     def _generate_title(
         self,

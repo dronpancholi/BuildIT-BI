@@ -169,7 +169,7 @@ async def ask_question(
 ):
     """Ask a question to the AI CFO."""
     service = CFOCoreService()
-    question = service.ask_question(tenant_id, user.id, body.user_query, body.context or {})
+    question = await service.ask_question(tenant_id, user.id, body.user_query, body.context or {})
 
     repo = CFOQuestionRepository(db)
     saved = await repo.create(

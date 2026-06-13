@@ -279,11 +279,11 @@ class AICFOCopilot:
             CopilotCapability.STRATEGIC_PLANNING,
         ]
 
-    def process_query(
+    async def process_query(
         self, user_id: uuid.UUID, query: str, context: Optional[Dict[str, Any]] = None
     ) -> Tuple[Message, List[CopilotActionRecord]]:
         context = context or {}
-        reasoning_chain = self.multi_step_reasoning(query, context)
+        reasoning_chain = await self.multi_step_reasoning(query, context)
         actions_taken: List[CopilotActionRecord] = []
 
         for step in reasoning_chain.steps:
@@ -324,7 +324,7 @@ class AICFOCopilot:
 
         return assistant_message, actions_taken
 
-    def multi_step_reasoning(self, query: str, context: Optional[Dict[str, Any]] = None) -> ReasoningChain:
+    async def multi_step_reasoning(self, query: str, context: Optional[Dict[str, Any]] = None) -> ReasoningChain:
         context = context or {}
         chain = ReasoningChain(id=uuid.uuid4(), query=query)
         overall_start = datetime.utcnow()
@@ -407,7 +407,7 @@ class AICFOCopilot:
         accumulated_confidence *= validate_result["confidence"]
         all_evidence.extend(validate_result.get("evidence", []))
 
-        synthesize_result = self._synthesize_response(parse_result, compute_result, validate_result, context)
+        synthesize_result = await self._synthesize_response(parse_result, compute_result, validate_result, context)
         chain.steps.append({
             "step": ReasoningStep.SYNTHESIZE.value,
             "description": "Combined results into coherent answer",
@@ -776,67 +776,64 @@ class AICFOCopilot:
             "execution_time_ms": elapsed,
         }
 
-    def _synthesize_response(self, parse_result: Dict[str, Any], compute_result: Dict[str, Any], validate_result: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+    async def _synthesize_response(self, parse_result: Dict[str, Any], compute_result: Dict[str, Any], validate_result: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
+        """Synthesize response using LLM with computed data as context."""
+        from app.infrastructure.nim.llm_client import get_llm_client
+
         start = datetime.utcnow()
         intent = parse_result.get("intent", "ANALYZE")
         metrics = parse_result.get("metrics", [])
         time_range = parse_result.get("time_range", {})
         results = compute_result.get("results", {})
-        computation_type = compute_result.get("computation_type", "analysis")
 
-        response_parts: List[str] = []
+        # Build data summary for LLM context
+        data_lines = []
+        for metric, data in results.items():
+            if isinstance(data, dict):
+                current = data.get("current", data.get("value", "N/A"))
+                trend = data.get("trend", "")
+                change = data.get("change_pct", 0)
+                data_lines.append(f"- {metric}: {current} ({'+' if isinstance(change, (int, float)) and change > 0 else ''}{change}% {trend})")
+            else:
+                data_lines.append(f"- {metric}: {data}")
 
-        if intent == "ANALYZE":
-            response_parts.append(f"Based on my analysis of {', '.join(metrics)} for {time_range.get('description', 'the requested period')}:")
-            for metric, data in results.items():
-                if isinstance(data, dict):
-                    trend = data.get("trend", "")
-                    change = data.get("change_pct", 0)
-                    response_parts.append(f"- **{metric.title()}**: Currently at {data.get('current', 'N/A')} ({'+' if change > 0 else ''}{change}% {trend})")
-        elif intent == "EXPLAIN":
-            response_parts.append(f"Here's why the {', '.join(metrics)} metrics are showing these patterns:")
-            for metric, data in results.items():
-                if isinstance(data, dict):
-                    factors = data.get("factors", [])
-                    response_parts.append(f"- **{metric.title()}**: {', '.join(factors[:3]) if factors else 'Analysis pending'}")
-        elif intent == "COMPARE":
-            response_parts.append(f"Comparing {', '.join(metrics)} across periods:")
-            for metric, data in results.items():
-                if isinstance(data, dict):
-                    response_parts.append(f"- **{metric.title()}**: Current {data.get('current', 'N/A')} vs Previous {data.get('previous', 'N/A')} (Variance: {data.get('variance', 'N/A')})")
-        elif intent == "FORECAST":
-            response_parts.append(f"Forecast for {', '.join(metrics)}:")
-            for metric, data in results.items():
-                if isinstance(data, dict):
-                    response_parts.append(f"- **{metric.title()}**: Next quarter forecast: {data.get('forecast_next_quarter', 'N/A')} (CI: {data.get('confidence_interval', ['N/A', 'N/A'])})")
-        elif intent == "GENERATE_BRIEFING":
-            response_parts.append(f"**Financial Briefing** for {time_range.get('description', 'the period')}:")
-            for metric, data in results.items():
-                if isinstance(data, dict):
-                    status_icon = "✓" if data.get("status") == "on_track" else "⚠"
-                    response_parts.append(f"{status_icon} **{metric.title()}**: {data.get('value', 'N/A')} - {data.get('highlight', '')}")
-        elif intent == "RUN_SCENARIO":
-            response_parts.append(f"Scenario analysis for {', '.join(metrics)}:")
-            for metric, data in results.items():
-                if isinstance(data, dict):
-                    response_parts.append(f"- **{metric.title()}**: Baseline: {data.get('baseline', 'N/A')} | Optimistic: {data.get('optimistic', 'N/A')} | Pessimistic: {data.get('pessimistic', 'N/A')}")
-        elif intent == "ASSESS_RISK":
-            response_parts.append(f"Risk assessment for {', '.join(metrics)}:")
-            for metric, data in results.items():
-                if isinstance(data, dict):
-                    risk_level = data.get("risk_level", "unknown")
-                    risk_factors = data.get("risk_factors", [])
-                    response_parts.append(f"- **{metric.title()}**: Risk level: {risk_level.upper()} - {', '.join(risk_factors[:2]) if risk_factors else 'No specific factors identified'}")
-        else:
-            response_parts.append(f"Analysis of {', '.join(metrics)}:")
-            for metric, data in results.items():
-                response_parts.append(f"- **{metric.title()}**: {data}")
+        data_context = "\n".join(data_lines) if data_lines else "No specific metric data available."
+        period_desc = time_range.get("description", "the requested period")
 
-        response = "\n".join(response_parts)
+        system_prompt = (
+            "You are an AI financial copilot for a healthcare organization. "
+            "Provide clear, professional, actionable financial analysis. "
+            "Use markdown formatting. Be specific with numbers when available. "
+            "Keep responses concise (3-5 sentences max)."
+        )
+
+        user_prompt = (
+            f"User intent: {intent}\n"
+            f"Time period: {period_desc}\n"
+            f"Metrics requested: {', '.join(metrics)}\n\n"
+            f"Data:\n{data_context}\n\n"
+            f"Provide a professional financial analysis response."
+        )
+
+        llm = get_llm_client()
+        response = await llm.complete(
+            prompt=user_prompt,
+            system=system_prompt,
+            temperature=0.3,
+            max_tokens=512,
+        )
+
+        if not response:
+            # Fallback to template
+            response = f"Based on my analysis of {', '.join(metrics)} for {period_desc}:\n"
+            for metric, data in results.items():
+                if isinstance(data, dict):
+                    response += f"- **{metric.title()}**: {data.get('current', 'N/A')}\n"
+
         if not validate_result.get("valid"):
             response += "\n\n_Note: Some validation issues were detected. Results should be reviewed._"
 
-        confidence = 0.9 if response_parts else 0.5
+        confidence = 0.9 if response else 0.5
         evidence = [{"type": "synthesis", "response_length": len(response), "metrics_included": len(metrics)}]
         elapsed = int((datetime.utcnow() - start).total_seconds() * 1000)
         return {

@@ -92,7 +92,7 @@ async def process_query(
 
     try:
         copilot = AICFOCopilot(tenant_id)
-        message, actions = copilot.process_query(user.id, user_query, context)
+        message, actions = await copilot.process_query(user.id, user_query, context)
 
         repo = CopilotConversationRepository(db)
         conversation = await repo.create(
